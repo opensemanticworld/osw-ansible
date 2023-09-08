@@ -1,0 +1,326 @@
+# Begin: Install Software
+- hosts: all
+  vars:
+    domain: demo2.open-semantic-lab.org
+    dir: osw-demo2
+  roles:
+  - kwoodson.yedit
+  tasks:
+
+  - name: Create a project dir
+    ansible.builtin.file:
+      path: /usr/local/docker-container/{{ dir }}
+      state: directory
+      mode: '0775'
+      owner: stier
+      group: dev
+
+  - name: Create a project subdirs
+    ansible.builtin.file:
+      path: /usr/local/docker-container/{{ dir }}/{{ item }}
+      state: directory
+      mode: '0775'
+      owner: stier
+      group: dev
+    with_items:
+      - blazegraph/data
+      - h2ogpt/data/pages
+      - mediawiki/config
+      - mysql
+      #- mysql/data
+
+  - name: Create mediawiki dir
+    ansible.builtin.file:
+      path: /usr/local/docker-container/{{ dir }}/mediawiki/data
+      state: directory
+      mode: '0775'
+      owner: stier
+      group: www-data
+
+  - name: Create mediawiki filedirs (required for h2ogpt)
+    ansible.builtin.file:
+      path: /usr/local/docker-container/{{ dir }}/mediawiki/data/{{ item }}
+      state: directory
+      mode: '0775'
+      owner: stier
+      group: www-data
+    with_items: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
+
+  - name: Creating .env file
+    copy:
+      dest: "/usr/local/docker-container/{{ dir }}/.env"
+      content: |
+        MW_HOST_PORT=8081
+        MW_SITE_SERVER=https://{{ domain }}
+        MW_SITE_NAME=OpenSemanticWorld
+        MW_SITE_LANG=en
+        MW_TIME_ZONE=Europe/Berlin
+        MW_ADMIN_PASS=G1cCkvbgWHAiR2DL89q8
+        MW_DB_PASS=aRtu1dzc355bdU9AystZ
+        
+        MW_PAGE_PACKAGES="
+        world.opensemantic.core;
+        world.opensemantic.base;
+        world.opensemantic.lab;
+        "
+        
+        MW_AUTOIMPORT_PAGES=true
+        MW_AUTOBUILD_SITEMAP=true
+        
+        MYSQL_HOST_PORT=3307
+        MYSQL_ROOT_PASSWORD=hJPlJMA3Dwy1Nahw8KXl
+        
+        DRAWIO_HOST_PORT=8082
+        DRAWIO_SERVER=https://drawio.{{ domain }}
+        
+        GRAPHDB_HOST_PORT=9999
+        
+        H2OGPT_SERVER=gpt.{{ domain }}
+        WIKI_SERVER=https://{{ domain }}
+        WIKI_USERNAME=Admin
+        WIKI_PASSWORD=VPZV6xOGbec6b0X4c6ln
+
+  - name: Creating a file with content
+    copy:
+      dest: "/usr/local/docker-container/{{ dir }}/mediawiki/config/CustomSettings.php"
+      content: |
+        # Protect against web entry
+        if ( !defined( 'MEDIAWIKI' ) ) {
+            exit;
+        }
+
+######## Place your settings below ########
+
+  - name: manage yaml files
+    yedit:
+      src: /usr/local/docker-container/{{ dir }}/docker-compose.yml
+      value:
+        version: '3.8'
+        services:
+            db:
+                image: mysql:8.0.17
+                command: mysqld --default-authentication-plugin=mysql_native_password
+                restart: unless-stopped
+                ports:
+                    - "${MYSQL_HOST_PORT}:3306"
+                environment:
+                    - MYSQL_ROOT_HOST=%
+                    - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+                volumes:
+                    - ./mysql/data:/var/lib/mysql
+
+            graphdb:
+                image: nawer/blazegraph
+                restart: unless-stopped
+                environment:
+                    JAVA_XMS: 512m
+                    JAVA_XMX: 1g
+                volumes:
+                    - ./blazegraph/data:/var/lib/blazegraph
+                    - ./blazegraph/config:/docker-entrypoint-initdb.d
+                ports:
+                    - "${GRAPHDB_HOST_PORT}:9999"
+
+            mediawiki:
+                image: opensemanticlab/osl-mw:main
+                restart: unless-stopped
+                depends_on:
+                    - db
+                    - elasticsearch
+                    - memcached
+                    - graphdb
+                    - drawio
+                ports:
+                    - "${MW_HOST_PORT}:80"
+                networks:
+                    - default
+                    - caddy
+                labels:
+                    caddy: ${MW_SITE_SERVER}
+                    caddy.reverse_proxy: "{{ '{{' }}upstreams 80{{ '}}' }}"
+                volumes:
+                    - ./mediawiki/config/CustomSettings.php:/var/www/html/w/CustomSettings.php
+                    - ./mediawiki/data:/var/www/html/w/images
+                environment:
+                    - TZ=${MW_TIME_ZONE}
+                    - MW_SITE_SERVER=${MW_SITE_SERVER}
+                    - MW_SITE_NAME=${MW_SITE_NAME}
+                    - MW_SITE_LANG=${MW_SITE_LANG}
+                    - MW_TIME_ZONE=${MW_TIME_ZONE}
+                    - MW_DEFAULT_SKIN=Citizen
+                    - MW_ENABLE_UPLOADS=1
+                    - MW_USE_INSTANT_COMMONS=0
+                    - MW_ADMIN_USER=admin
+                    - MW_ADMIN_PASS=${MW_ADMIN_PASS}
+                    - MW_DB_NAME=mediawiki
+                    - MW_DB_USER=mwuser
+                    - MW_DB_PASS=${MW_DB_PASS}
+                    - MW_DB_INSTALLDB_USER=root
+                    - MW_DB_INSTALLDB_PASS=${MYSQL_ROOT_PASSWORD}
+                    - MW_AUTOUPDATE=true
+                    - MW_REINSTALL=true
+                    - MW_AUTOINSTALL_CA_CERTS=false
+                    - MW_PAGE_PACKAGES=${MW_PAGE_PACKAGES}
+                    - MW_AUTOIMPORT_PAGES=${MW_AUTOIMPORT_PAGES}
+                    - MW_AUTOBUILD_SITEMAP=${MW_AUTOBUILD_SITEMAP}
+                    - MW_MAIN_CACHE_TYPE=CACHE_MEMCACHED
+                    - MW_MEMCACHED_SERVERS=memcached:11211
+                    - MW_SEARCH_TYPE=CirrusSearch
+                    - MW_CIRRUS_SEARCH_SERVERS=elasticsearch
+                    - MW_REST_DOMAIN=mediawiki
+                    - MW_FLOW_NAMESPACES=NS_TALK,NS_USER_TALK
+                    - PHP_LOG_ERRORS=On
+                    - PHP_ERROR_REPORTING=E_ALL #Production Value: E_ALL & ~E_DEPRECATED & ~E_STRICT
+                    - DRAWIO_SERVER=${DRAWIO_SERVER} #public url
+
+            memcached:
+                image: memcached
+                restart: unless-stopped
+
+            elasticsearch:
+                image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+                restart: unless-stopped
+                environment:
+                  - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+                  - "discovery.type=single-node"
+
+            drawio:
+                image: jgraph/drawio
+                restart: unless-stopped
+                ports:
+                    - "${DRAWIO_HOST_PORT}:8080"
+                networks:
+                    - caddy
+                labels:
+                    caddy: ${DRAWIO_SERVER}
+                    caddy.reverse_proxy: "{{ '{{' }}upstreams 8080{{ '}}' }}"
+
+            h2ogpt:
+                profiles:
+                    - chatbot
+                image: opensemanticworld/h2ogpt-cpu:latest
+                build:
+                    context: ./build
+                container_name: h2ogpt
+                shm_size: '2gb'
+                ulimits:
+                    memlock: -1
+                restart: unless-stopped
+                networks:
+                    - caddy
+                labels:
+                    #caddy: ${MW_SITE_SERVER}/h2ogpt
+                    #caddy.reverse_proxy: "{{ '{{' }}upstreams 7860{{ '}}' }}"
+                    caddy_0: ${H2OGPT_SERVER}/h2ogpt
+                    caddy_0.reverse_proxy: "{{ '{{' }}upstreams 7860{{ '}}' }}"
+                    caddy_1: ${MW_SITE_SERVER}
+                    caddy_1.handle_path: /h2ogpt/*
+                    caddy_1.handle_path.reverse_proxy: "{{ '{{' }}upstreams 7860{{ '}}' }}"
+                environment:
+                    - WIKI_SERVER=${WIKI_SERVER}
+                    - WIKI_USERNAME=${WIKI_USERNAME}
+                    - WIKI_PASSWORD=${WIKI_PASSWORD}
+                volumes:
+                # create all hashed dirs first
+                # DIRS=(0 1 2 3 4 5 6 7 8 9 a b c d e f); BASE=./mediawiki/data && for i in $DIRS; do mkdir -p "$BASE/$i"; done && chown www-data:www-data $BASE
+                # update pages: docker compose exec h2ogpt conda run -n h2ogpt python /app/scrape.py
+                    - ./h2ogpt/data/pages:/userdata/pages
+                    - ./mediawiki/data/0:/userdata/files/0
+                    - ./mediawiki/data/1:/userdata/files/1
+                    - ./mediawiki/data/2:/userdata/files/2
+                    - ./mediawiki/data/3:/userdata/files/3
+                    - ./mediawiki/data/4:/userdata/files/4
+                    - ./mediawiki/data/5:/userdata/files/5
+                    - ./mediawiki/data/6:/userdata/files/6
+                    - ./mediawiki/data/7:/userdata/files/7
+                    - ./mediawiki/data/8:/userdata/files/8
+                    - ./mediawiki/data/9:/userdata/files/9
+                    - ./mediawiki/data/a:/userdata/files/a
+                    - ./mediawiki/data/b:/userdata/files/b
+                    - ./mediawiki/data/c:/userdata/files/c
+                    - ./mediawiki/data/d:/userdata/files/d
+                    - ./mediawiki/data/e:/userdata/files/e
+                    - ./mediawiki/data/f:/userdata/files/f
+                # cmd line options see: https://github.com/h2oai/h2ogpt/blob/a79ffea12b26ffcdcfc388e5e0819d86470f3c1d/src/gen.py#L215
+                entrypoint: [
+                    "conda", "run", "--no-capture-output", "-n", "h2ogpt", 
+                    "python", "h2ogpt/generate.py", 
+                    "--base_model='llama'", 
+                    "--prompt_type=llama2", 
+                    "--score_model=None", 
+                    "--langchain_mode='UserData'", 
+                    "--user_path=userdata",
+                    "--detect_user_path_changes_every_query=True",
+                    "--visible_submit_buttons=False",
+                    "--visible_side_bar=False",
+                    "--visible_submit_buttons=False",
+                    "--visible_side_bar=False",
+                    "--visible_chat_tab=True", 
+                    "--visible_doc_selection_tab=False", 
+                    "--visible_doc_view_tab=False", 
+                    "--visible_chat_history_tab=False", 
+                    "--visible_expert_tab=False", 
+                    "--visible_models_tab=False", 
+                    "--visible_system_tab=False", 
+                    "--visible_tos_tab=False", 
+                    "--visible_hosts_tab=False", 
+                    "--chat_tables=True",
+                    "--visible_h2ogpt_header=False",
+                    "--root_path='/h2ogpt'"
+                ]
+                # entrypoint: >-
+                #   /bin/bash -c \"nohup bash -c 'conda run --no-capture-output -n h2ogpt python /app/scrape.py 
+                #   &' && conda run --no-capture-output -n h2ogpt python h2ogpt/generate.py 
+                #   --base_model='llama' 
+                #   --prompt_type=llama2 
+                #   --score_model=None 
+                #   --langchain_mode='UserData' 
+                #   --user_path=userdata 
+                #   --detect_user_path_changes_every_query=True 
+                #   --visible_submit_buttons=False 
+                #   --visible_side_bar=False 
+                #   --visible_submit_buttons=False 
+                #   --visible_side_bar=False 
+                #   --visible_chat_tab=True 
+                #   --visible_doc_selection_tab=False 
+                #   --visible_doc_view_tab=False 
+                #   --visible_chat_history_tab=False 
+                #   --visible_expert_tab=False 
+                #   --visible_models_tab=False 
+                #   --visible_system_tab=False 
+                #   --visible_tos_tab=False 
+                #   --visible_hosts_tab=False 
+                #   --chat_tables=True 
+                #   --visible_h2ogpt_header=False 
+                #   --root_path='/h2ogpt'"
+                # entrypoint: conda run --no-capture-output -n h2ogpt python /app/scrape.py && conda run --no-capture-output -n h2ogpt python h2ogpt/generate.py --base_model='llama' --prompt_type=llama2 --score_model=None --langchain_mode='UserData' --user_path=userdata --detect_user_path_changes_every_query=True --visible_submit_buttons=False --visible_side_bar=False --visible_submit_buttons=False --visible_side_bar=False --visible_chat_tab=True --visible_doc_selection_tab=False --visible_doc_view_tab=False --visible_chat_history_tab=False --visible_expert_tab=False --visible_models_tab=False --visible_system_tab=False --visible_tos_tab=False --visible_hosts_tab=False --chat_tables=True --visible_h2ogpt_header=False --root_path='/h2ogpt'
+        networks:
+          # Add caddy as an external network.
+          caddy:
+            external: true
+
+
+  - name: Create and start osw services
+    community.docker.docker_compose:
+      project_src: /usr/local/docker-container/{{ dir }}
+    register: output
+  
+  - name: Wait until HTTP status is 200
+    uri:
+      url: 'https://{{ domain }}'
+      return_content: yes
+      validate_certs: yes
+      status_code:
+        - 200
+    until: uri_output.status == 200
+    retries: 100 # 10 min
+    delay: 6 # Every 6 seconds
+    register: uri_output
+
+  - name: Create and start h2ogpt services
+    community.docker.docker_compose:
+      project_src: /usr/local/docker-container/{{ dir }}
+      profiles:
+        - chatbot
+    register: output
+

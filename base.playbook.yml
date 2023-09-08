@@ -1,0 +1,121 @@
+
+# Begin: Prerequisites
+- hosts: all
+  gather_facts: False
+  become: yes
+  become_user: root
+
+  tasks:
+  - name: Verify SSH connection
+    ansible.builtin.wait_for_connection:
+    
+  - name: Cloud-init done
+    ansible.builtin.raw:  while [ ! -f /var/lib/cloud/instance/boot-finished]; do sleep 10s; done
+
+  - name: Install aptitude
+    apt:
+      name: aptitude
+      state: latest
+      update_cache: true
+
+  - name: Check if Python 3 symlink exists
+    ansible.builtin.stat:
+      path: /usr/bin/python
+    register: python_symlink
+
+  - name: Ensure Python 3 is available
+    ansible.builtin.raw: ln -s /usr/bin/python3 /usr/bin/python
+    when: not python_symlink.stat.exists
+
+  - name: Ensure group "dev" exists
+    ansible.builtin.group:
+      name: dev
+      state: present
+
+  - name: Creates directory
+    file:
+      path: /usr/local/docker-container
+      state: directory
+      owner: stier
+      group: dev
+      mode: 0775
+# End: Prerequisites
+
+# Begin: Install Software
+- hosts: all
+  become: yes
+  become_user: root
+  vars:
+    pip_install_packages:
+      - name: docker
+      - name: docker-compose
+  roles:
+  - geerlingguy.pip
+  - geerlingguy.docker
+  tasks:
+
+  #- name: Include the docker role
+  #  include_role:
+  #    name: geerlingguy.docker
+
+  - name: Ensure group "docker" exists
+    ansible.builtin.group:
+      name: docker
+      state: present
+
+  - name: Add the user 'stier', appending the group 'dev,docker,www-data' to the user's groups
+    ansible.builtin.user:
+      name: stier
+      groups: dev,docker,www-data
+      append: yes
+
+  - name: Reset ssh connection to allow user changes to affect ansible user
+    ansible.builtin.meta:
+      reset_connection
+
+# Begin: Install Software
+- hosts: all
+  roles:
+  - kwoodson.yedit
+  tasks:
+
+  - name: Create a directory if it does not exist
+    ansible.builtin.file:
+      path: /usr/local/docker-container/caddy-docker-proxy
+      state: directory
+      mode: '0755'
+
+  - name: Create a network
+    docker_network:
+      name: caddy
+
+  - name: manage yaml files
+    yedit:
+      src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.yml
+      value:
+        version: "3.7"
+        services:
+          caddy:
+            image: lucaslorentz/caddy-docker-proxy:ci-alpine
+            ports:
+              - 80:80
+              - 443:443
+            environment:
+              - CADDY_INGRESS_NETWORKS=caddy
+            networks:
+              - caddy
+            volumes:
+              - /var/run/docker.sock:/var/run/docker.sock
+              - caddy_data:/data
+            restart: unless-stopped
+        networks:
+          caddy:
+            external: true
+        volumes:
+          caddy_data: {}
+
+  - name: Create and start caddy services
+    community.docker.docker_compose:
+      project_src: /usr/local/docker-container/caddy-docker-proxy
+    register: output
+
