@@ -1,0 +1,114 @@
+# osw.yml
+
+# Begin: Check Ansible User
+- name: Check Ansible User
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Fail reliably if 'ansible_user' is not defined
+      fail:
+        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+      when: ansible_user is not defined
+
+    - name: Print 'ansible_user'
+      debug:
+        msg: "ansible_user: {{ ansible_user }}"
+      when: ansible_user is defined
+# End: Check Ansible User
+
+# Begin: Deploy Open Semantic World (OSW)
+- name: Deploy Open Semantic World (OSW)
+  hosts: all
+  vars:
+    
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+
+    - name: Clone Open Semantic World (OSW) repository
+      ansible.builtin.git:
+        repo: https://github.com/OpenSemanticLab/osl-mw-docker-compose.git
+        dest: /usr/local/docker-container/osw
+        version: "{{ git_osw_version }}"
+    
+    - name: Change ownership of osw/mediawiki/data directory
+      ansible.builtin.file:
+        path: /usr/local/docker-container/osw/mediawiki/data
+        owner: "{{ ansible_user }}"
+        group: www-data
+        state: directory
+        mode: 0755
+
+    - name: Copy .env.example to .env
+      ansible.builtin.copy:
+        src: /usr/local/docker-container/osw/.env.example
+        dest: /usr/local/docker-container/osw/.env
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: 0644
+        force: no
+
+    - name: Display Domain
+      debug: 
+        msg: "{{ domain }}"
+
+    - name: Change MV_SITE_SERVER in file .env
+      ansible.builtin.lineinfile:
+        path: /usr/local/docker-container/osw/.env
+        regexp: '^MW_SITE_SERVER='
+        line: MW_SITE_SERVER=https://{{ domain }}
+        state: present
+
+    - name: Change DRAWIO_SERVER in .env
+      ansible.builtin.lineinfile:
+        path: /usr/local/docker-container/osw/.env
+        regexp: '^DRAWIO_SERVER='
+        line: DRAWIO_SERVER=https://drawio.{{ domain }}
+        state: present
+
+    # only works once
+    # - name: Change 'change_me' content in .env to admin password
+    #   ansible.builtin.lineinfile:
+    #     path: /usr/local/docker-container/osw/.env
+    #     regexp: '^.*change_me.*$'
+    #     line: "{{ item.key }}={{ item.value }}"
+    #     state: present
+    #   with_dict:
+    #     MYSQL_ROOT_PASSWORD: "{{ admin_password }}"
+    #     MW_DB_PASS: "{{ admin_password }}"
+    #     MW_ADMIN_PASS: "{{ admin_password }}"
+
+    - name: Change MW_ADMIN_PASS in file .env
+      ansible.builtin.lineinfile:
+        path: /usr/local/docker-container/osw/.env
+        regexp: '^MW_ADMIN_PASS='
+        line: MW_ADMIN_PASS={{ admin_password }}
+        state: present
+
+    - name: Change MW_DB_PASS in file .env
+      ansible.builtin.lineinfile:
+        path: /usr/local/docker-container/osw/.env
+        regexp: '^MW_DB_PASS='
+        line: MW_DB_PASS={{ admin_password }}
+        state: present
+
+    - name: Change MYSQL_ROOT_PASSWORD in file .env
+      ansible.builtin.lineinfile:
+        path: /usr/local/docker-container/osw/.env
+        regexp: '^MYSQL_ROOT_PASSWORD='
+        line: MYSQL_ROOT_PASSWORD={{ admin_password }}
+        state: present
+
+    - name: Copy Compose Override Caddy
+      ansible.builtin.copy:
+        src: /usr/local/docker-container/osw/docker-compose.caddy.example.override.yml
+        dest: /usr/local/docker-container/osw/docker-compose.override.yaml
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: 0644
+        force: yes
+
+    - name: Deploy Compose Open Semantic World (OSW)
+      community.docker.docker_compose:
+        project_src: /usr/local/docker-container/osw
+      register: osw

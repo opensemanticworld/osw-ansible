@@ -1,0 +1,18 @@
+# inventory.yml
+
+virtualmachines:
+    hosts:
+      vm-osw-1:
+        ansible_host: <IP_ADDRESS_1>
+        ansible_user: ubuntu
+        git_osw_version: main
+        domain: example1.org
+        admin_password: my_secret_password_1
+      # vm-osw-2:
+      #   ansible_host: <IP_ADDRESS_2>
+      #   ansible_user: ubuntu
+      #   git_osw_version: main
+      #   domain: example2.org
+      #   admin_password: my_secret_password_2
+
+        

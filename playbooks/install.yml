@@ -1,0 +1,86 @@
+# install.yml
+
+# Begin: Check Ansible User
+- name: Check Ansible User
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Fail reliably if 'ansible_user' is not defined
+      fail:
+        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+      when: ansible_user is not defined
+
+    - name: Print 'ansible_user'
+      debug:
+        msg: "ansible_user: {{ ansible_user }}"
+      when: ansible_user is defined
+# End: Check Ansible User
+
+# Begin: Prerequisites
+- name: Prerequisites
+  hosts: all
+  gather_facts: false
+  become: yes
+  become_user: root
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+      
+    - name: Cloud-init done
+      ansible.builtin.raw:  while [ ! -f /var/lib/cloud/instance/boot-finished]; do sleep 10s; done
+      changed_when: false
+
+    - name: Check if Python 3 symlink exists
+      ansible.builtin.stat:
+        path: /usr/bin/python
+      register: python_symlink
+
+    - name: Create Python 3 symlink if not exists
+      ansible.builtin.raw: ln -s /usr/bin/python3 /usr/bin/python
+      when: not python_symlink.stat.exists
+
+    - name: Ensure group "dev" exists
+      ansible.builtin.group:
+        name: dev
+        state: present
+
+    - name: Install python3-pip
+      apt: 
+        name: python3-pip
+        update_cache: yes
+        state: latest
+# End: Prerequisites
+
+# Begin: Setup Docker
+- name: Setup Docker
+  hosts: all
+  become: yes
+  become_user: root
+  vars:
+    pip_install_packages:
+      - name: docker
+      - name: docker-compose
+  roles:
+    - geerlingguy.pip
+    - geerlingguy.docker
+  tasks:
+
+    - name: Create 'docker-container' directory
+      file:
+        path: /usr/local/docker-container
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: dev
+        mode: 0775
+
+    - name: Ensure group 'docker' exists
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    - name: Add 'ansible_user' to groups 'dev, docker, www-data'
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: dev,docker,www-data
+        append: yes
+# End: Setup Docker

@@ -1,0 +1,74 @@
+# caddy.yml
+
+# Begin: Check Ansible User
+- name: Check Ansible User
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Fail reliably if 'ansible_user' is not defined
+      fail:
+        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+      when: ansible_user is not defined
+
+    - name: Print 'ansible_user'
+      debug:
+        msg: "ansible_user: {{ ansible_user }}"
+      when: ansible_user is defined
+# End: Check Ansible User
+
+# Begin: Deploy Caddy
+- name: Deploy Caddy
+  hosts: all
+  roles:
+    - kwoodson.yedit
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+
+    - name: Create 'caddy-docker-proxy' directory if it does not exist
+      ansible.builtin.file:
+        path: /usr/local/docker-container/caddy-docker-proxy
+        owner: "{{ ansible_user }}"
+        state: directory
+        mode: 0755
+
+    - name: Create a network
+      docker_network:
+        name: caddy
+
+    - name: Manage docker-compose.yml of caddy-docker-proxy
+      yedit:
+        src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.yml
+        value:
+          version: "3.7"
+          services:
+            caddy:
+              image: lucaslorentz/caddy-docker-proxy:ci-alpine
+              container_name: caddycontainer
+              ports:
+                - 80:80
+                - 443:443
+              environment:
+                - CADDY_INGRESS_NETWORKS=caddy
+              networks:
+                - caddy
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+                - caddy_data:/data
+              restart: unless-stopped
+          networks:
+            caddy:
+              external: true
+          volumes:
+            caddy_data: {}
+
+    - name: Create and start caddy service
+      community.docker.docker_compose:
+        project_src: /usr/local/docker-container/caddy-docker-proxy
+      register: caddyproxy
+
+    - name: Verify if caddy is running
+      ansible.builtin.assert:
+        that: 
+          - "caddyproxy.services.caddy.caddycontainer.state.running"
+# End: Deploy Caddy
