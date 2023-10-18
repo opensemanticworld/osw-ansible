@@ -1,7 +1,7 @@
 # OSW Ansible
 
 Summary of Ansible Playbooks for Open Semantic World (OSW) components.
-A full OSW deployment can be done by running the [main.yml](playbooks/main.yml) playbook.
+A full [OSL](https://github.com/OpenSemanticLab) deployment can be done by running the [main.yml](playbooks/main.yml) playbook.
 
 <!-- vscode-markdown-toc -->
 <!-- markdownlint-disable-next-line MD036 -->
