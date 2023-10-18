@@ -46,10 +46,10 @@ You need to have the following information for a successful OSW deployment:
     git clone https://github.com/OpenSemanticWorld/osw-ansible.git
     ```
 
-2. To configure the OSW deployment, copy the `inventory.yml.example` file to `inventory.yml` in root directory and edit the variables.
+2. To configure the OSW deployment, copy the [inventory.example.yml](inventory.example.yml) file to `inventory.yml` in root directory and edit the variables.
 
     ```bash
-    cd osw-ansible; cp -f inventory.yml.example inventory.yml
+    cd osw-ansible; cp -f inventory.example.yml inventory.yml
     ```
 
     For advanced modifications see [Ansible Host and Group Variables](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#group-variables).
