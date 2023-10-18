@@ -68,7 +68,7 @@ After configuration, you can run the Ansible Playbooks to deploy the OSW compone
     2. [playbooks/caddy.yml](playbooks/caddy.yml)
     3. [playbooks/osw.yml](playbooks/osw.yml)
 
-    A reverse proxy will be installed and configured with Caddy. The OSW components will be installed and configured with Docker Compose. Ensure you have no other proxy, e.g., `nginx` running on the desired host.
+    A reverse proxy will be installed and configured with `Caddy.` All OSW components will be installed and configured with Docker Compose. Ensure you have no other proxy, e.g., `nginx` running on the desired host.
 
 2. OPTIONAL: Customization
 
