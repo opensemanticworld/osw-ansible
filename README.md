@@ -49,7 +49,7 @@ Summary of Ansible Playbooks for Open Semantic World (OSW) components.
 
     - Public IP address of your VM or server
     - Username with `sudo` permissions and `SSH` access to the VM
-    - Domain pointing to the VMs public IP address
+    - Domain pointing to the VMs or servers public IP address
 
     For advanced modifications see [Ansible Host and Group Variables](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#group-variables).
 
