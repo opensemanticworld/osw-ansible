@@ -1,0 +1,21 @@
+# main.yml
+
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+
+# Begin: Full OSW Deployment
+- name: Full OSW Deployment
+  hosts: localhost
+  tasks:
+    - ansible.builtin.debug:
+        msg: "Calling playbook sequence for full OSW Deployment: install.yml, caddy.yml, osw.yml"
+
+- name: Run Installations
+  ansible.builtin.import_playbook: install.yml
+  
+- name: Run caddy Deployment
+  ansible.builtin.import_playbook: caddy.yml
+
+- name: Run OSW Deployment
+  ansible.builtin.import_playbook: osw.yml
+# End: Full OSW Deployment

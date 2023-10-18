@@ -1,5 +1,9 @@
 # caddy.yml
 
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+#   Simon Stier, https://github.com/simontaurus
+
 # Begin: Check Ansible User
 - name: Check Ansible User
   hosts: all
@@ -7,7 +11,7 @@
   tasks:
     - name: Fail reliably if 'ansible_user' is not defined
       fail:
-        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+        msg: "You need to set the right ansible_user in inventory.yml or by using the flag -u <USERNAME> when running the playbook!"
       when: ansible_user is not defined
 
     - name: Print 'ansible_user'

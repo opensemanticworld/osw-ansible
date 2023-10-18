@@ -1,5 +1,8 @@
 # osw.yml
 
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+
 # Begin: Check Ansible User
 - name: Check Ansible User
   hosts: all
@@ -18,9 +21,7 @@
 
 # Begin: Deploy Open Semantic World (OSW)
 - name: Deploy Open Semantic World (OSW)
-  hosts: all
-  vars:
-    
+  hosts: all   
   tasks:
     - name: Verify SSH connection
       ansible.builtin.wait_for_connection:
@@ -37,7 +38,7 @@
         owner: "{{ ansible_user }}"
         group: www-data
         state: directory
-        mode: 0755
+        mode: 0775
 
     - name: Copy .env.example to .env
       ansible.builtin.copy:
@@ -48,61 +49,27 @@
         mode: 0644
         force: no
 
-    - name: Display Domain
-      debug: 
-        msg: "{{ domain }}"
-
-    - name: Change MV_SITE_SERVER in file .env
-      ansible.builtin.lineinfile:
+    - name: Create/Replace values by key dict in .env file
+      lineinfile:
         path: /usr/local/docker-container/osw/.env
-        regexp: '^MW_SITE_SERVER='
-        line: MW_SITE_SERVER=https://{{ domain }}
-        state: present
-
-    - name: Change DRAWIO_SERVER in .env
-      ansible.builtin.lineinfile:
-        path: /usr/local/docker-container/osw/.env
-        regexp: '^DRAWIO_SERVER='
-        line: DRAWIO_SERVER=https://drawio.{{ domain }}
-        state: present
-
-    # only works once
-    # - name: Change 'change_me' content in .env to admin password
-    #   ansible.builtin.lineinfile:
-    #     path: /usr/local/docker-container/osw/.env
-    #     regexp: '^.*change_me.*$'
-    #     line: "{{ item.key }}={{ item.value }}"
-    #     state: present
-    #   with_dict:
-    #     MYSQL_ROOT_PASSWORD: "{{ admin_password }}"
-    #     MW_DB_PASS: "{{ admin_password }}"
-    #     MW_ADMIN_PASS: "{{ admin_password }}"
-
-    - name: Change MW_ADMIN_PASS in file .env
-      ansible.builtin.lineinfile:
-        path: /usr/local/docker-container/osw/.env
-        regexp: '^MW_ADMIN_PASS='
-        line: MW_ADMIN_PASS={{ admin_password }}
-        state: present
-
-    - name: Change MW_DB_PASS in file .env
-      ansible.builtin.lineinfile:
-        path: /usr/local/docker-container/osw/.env
-        regexp: '^MW_DB_PASS='
-        line: MW_DB_PASS={{ admin_password }}
-        state: present
-
-    - name: Change MYSQL_ROOT_PASSWORD in file .env
-      ansible.builtin.lineinfile:
-        path: /usr/local/docker-container/osw/.env
-        regexp: '^MYSQL_ROOT_PASSWORD='
-        line: MYSQL_ROOT_PASSWORD={{ admin_password }}
-        state: present
+        regexp: "^{{ item.key }}=.*$" 
+        line: "{{ item.key }}={{ item.value }}" 
+        backrefs: no # yes enables capture groups
+      # dict refers to new untracked .env copied from .env.example
+      # https://github.com/OpenSemanticLab/docker-compose-osl-wiki/blob/main/.example.env
+      # add or change valid key-value pairs to your needs and set vars in inventory.yml
+      with_dict: 
+        MYSQL_ROOT_PASSWORD: "{{ admin_password }}"
+        MW_DB_PASS: "{{ admin_password }}"
+        MW_ADMIN_PASS: "{{ admin_password }}"
+        MW_SITE_SERVER: "https://{{ domain }}"
+        DRAWIO_SERVER: "https://drawio.{{ domain }}"
+        GRAPHDB_SERVER: "https://graph.{{ domain }}"
 
     - name: Copy Compose Override Caddy
       ansible.builtin.copy:
         src: /usr/local/docker-container/osw/docker-compose.caddy.example.override.yml
-        dest: /usr/local/docker-container/osw/docker-compose.override.yaml
+        dest: /usr/local/docker-container/osw/docker-compose.override.yml
         remote_src: yes
         owner: "{{ ansible_user }}"
         mode: 0644
@@ -112,3 +79,21 @@
       community.docker.docker_compose:
         project_src: /usr/local/docker-container/osw
       register: osw
+
+    - name: Wait until HTTP status is 200
+      uri:
+        url: 'https://{{ domain }}'
+        return_content: yes
+        validate_certs: yes
+        status_code:
+          - 200
+      until: uri_output.status == 200
+      delay: 10     # every 10 seconds
+      retries: 60   # total 10 min
+      register: uri_output
+
+    - name: Display OSW Domain
+      debug: 
+        msg: "OSW has been deployed successfully, visit: https://{{ domain }}"
+      failed_when: uri_output.status != 200
+# End: Deploy Open Semantic World (OSW)

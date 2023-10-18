@@ -1,5 +1,9 @@
 # install.yml
 
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+#   Simon Stier, https://github.com/simontaurus
+
 # Begin: Check Ansible User
 - name: Check Ansible User
   hosts: all

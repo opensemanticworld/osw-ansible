@@ -10,14 +10,13 @@ Summary of Ansible Playbooks for Open Semantic World (OSW) components.
   - [Prerequisites](#prerequisites)
   - [Configuration](#configuration)
   - [Usage](#usage)
-  - [Testing](#testing)
 
 ## Prerequisites
 
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
 
     <details>
-    <summary>Ansible Galaxy Modules</summary>
+    <summary>Details</summary>
 
     To install the required Ansible Galaxy Modules after Ansible installation, run the following commands:
 
@@ -33,32 +32,50 @@ Summary of Ansible Playbooks for Open Semantic World (OSW) components.
 
 ## Configuration
 
-[Ansible Host and Group Variables](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#group-variables)
+1. Clone this repository:
+
+    ```bash
+    git clone https://github.com/OpenSemanticWorld/osw-ansible.git
+    ```
+
+2. To configure the OSW deployment, copy the `inventory.yml.example` file to `inventory.yml` in root directory and edit the variables.
+
+    ```bash
+    cd osw-ansible; cp -f inventory.yml.example inventory.yml
+    ```
+
+    You need to have the following information about your VM:
+
+    - Public IP address of your VM or server
+    - Username with `sudo` permissions and `SSH` access to the VM
+    - Domain pointing to the VMs public IP address
+
+    For advanced modifications see [Ansible Host and Group Variables](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#group-variables).
 
 ## Usage
 
-<!-- Run the following command to install the base OSW components: -->
+After configuration, you can run the Ansible Playbooks to deploy the OSW components. Either run the full OSW deployment or single specific components. Ensure you have the right permissions to run the Ansible Playbooks, your VM user must be in the `sudo` group and your deployment machine need to have `SSH` access to the VM.
 
-```bash
-ansible-playbook -i "<VM_PUBLIC_IP>" base.playb.yml -e "vm_user=<VM_USER_NAME>"
-```
+1. To run the full OSW deployment, run [playbooks/main.yml](playbooks/main.yml) by the following command:
 
-## Testing
+    ```bash
+    ansible-playbook -i inventory.yml playbooks/main.yml
+    ```
 
-Check inventory:
+    This will run the following playbooks in the ordered sequence:
 
-```bash
-ansible-inventory -i inventory.yml --list
-```
+    1. [playbooks/install.yml](playbooks/install.yml)
+    2. [playbooks/caddy.yml](playbooks/caddy.yml)
+    3. [playbooks/osw.yml](playbooks/osw.yml)
 
-Ping virtual machine:
+    A reverse proxy will be installed and configured with Caddy. The OSW components will be installed and configured with Docker Compose. Ensure you have no other proxy, e.g., `nginx` running on the desired host.
 
-```bash
-ansible virtualmachines -m ping -i inventory.yml -u ubuntu
-```
+2. OPTIONAL: Customization
 
-Run playbook:
+    If you want to create your own ansible playbooks for a OSW deployment, you optionally can run the playbooks as single components. For example, to use the `install.yml` playbook for basic dependency installations, run the following command:
 
-```bash
-ansible-playbook -i inventory.yml playbooks/install.yml
-```
+    ```bash
+    ansible-playbook -i inventory.yml playbooks/install.yml
+    ```
+
+    This will run the `install.yml` playbook only. Be aware of the dependencies of the playbooks. For example, the `osw.yml` playbook depends on the `install.yml` playbook. You need to set up the right dependencies by yourself if you run the playbooks separately or applying your own modifications to match your needs.

@@ -1,0 +1,21 @@
+# inventory.yml
+
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+
+virtualmachines:
+    hosts:
+      vm-osw-1:
+        ansible_host: <PUBLIC_IP_1>   # change this to your vm ip address
+        ansible_user: ubuntu          # change this to vm user with ssh sudo access
+        git_osw_version: main         # setup osw version
+        domain: example1.org          # change this to your domain
+        admin_password: my_secret_pw1 # sensitive, change this!
+      
+      # # For multiple VMs and OSW instances, add more hosts as you like:
+      # vm-osw-2:
+      #   ansible_host: <PUBLIC_IP_2>   # change this to your vm ip address
+      #   ansible_user: ubuntu          # change this to vm user with ssh sudo access
+      #   git_osw_version: main         # setup osw version
+      #   domain: example2.org          # change this to your domain
+      #   admin_password: my_secret_pw2 # sensitive, change this!
