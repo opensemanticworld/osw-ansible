@@ -44,7 +44,7 @@ Summary of Ansible Playbooks for Open Semantic World (OSW) components.
     cd osw-ansible; cp -f inventory.yml.example inventory.yml
     ```
 
-    You need to have the following information about your VM:
+    You need to have the following information for a successful OSW deployment:
 
     - Public IP address of your VM or server
     - Username with `sudo` permissions and `SSH` access to the VM
