@@ -40,8 +40,6 @@ You need to have the following information for a successful OSW deployment:
 - Username with `sudo` permissions and `SSH` access to the VM
 - Domain pointing to the VMs or servers public IP address
 
-For advanced modifications see [Ansible Host and Group Variables](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#group-variables).
-
 1. Clone this repository:
 
     ```bash
@@ -53,6 +51,8 @@ For advanced modifications see [Ansible Host and Group Variables](https://docs.a
     ```bash
     cd osw-ansible; cp -f inventory.yml.example inventory.yml
     ```
+
+    For advanced modifications see [Ansible Host and Group Variables](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#group-variables).
 
 ## Usage
 
