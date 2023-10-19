@@ -18,7 +18,7 @@ A full [OSL](https://github.com/OpenSemanticLab) deployment can be done by runni
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
 
     <details>
-    <summary>Details</summary>
+    <summary>Additional Ansible Galaxy Modules</summary>
 
     To install the required Ansible Galaxy Modules after Ansible installation, run the following commands:
 
@@ -36,9 +36,9 @@ A full [OSL](https://github.com/OpenSemanticLab) deployment can be done by runni
 
 You need to have the following information for a successful OSW deployment:
 
-- Public IP address of your VM or server
-- Username with `sudo` permissions and `SSH` access to the VM
-- Domain pointing to the VMs or servers public IP address
+- User with `sudo` permissions and `SSH` access to your remote machine
+- Public IP address of your remote machine
+- Domain pointing to the remote machines public IP address
 
 1. Clone this repository:
 
@@ -46,7 +46,7 @@ You need to have the following information for a successful OSW deployment:
     git clone https://github.com/OpenSemanticWorld/osw-ansible.git
     ```
 
-2. To configure the OSW deployment, copy the [inventory.example.yml](inventory.example.yml) file to `inventory.yml` in root directory and edit the variables.
+2. To configure the OSW deployment, copy the [inventory.example.yml](inventory.example.yml) file to `inventory.yml` in root directory and edit the variables to match your own configuration. Please note that the `inventory.yml` file gets ignored by git to prevent sensitive data from being pushed to the repository and is only available locally.
 
     ```bash
     cd osw-ansible; cp -f inventory.example.yml inventory.yml
@@ -56,7 +56,7 @@ You need to have the following information for a successful OSW deployment:
 
 ## Usage
 
-After configuration, you can run the Ansible Playbooks to deploy the OSW components. Either run the full OSW deployment or single specific components. Ensure you have the right permissions to run the Ansible Playbooks, your VM user must be in the `sudo` group and your deployment machine need to have `SSH` access to the VM.
+After configuration, you can run the Ansible Playbooks to deploy the OSW components. Either run the full OSW deployment or single specific components. Ensure you have the right permissions to run the Ansible Playbooks, your remote machine user must be in the `sudo` group and your deployment machine need to have `SSH` access.
 
 1. To run the full OSW deployment, run [playbooks/main.yml](playbooks/main.yml) by the following command:
 
