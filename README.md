@@ -80,7 +80,7 @@ After configuration, you can run the Ansible Playbooks to deploy the OSW compone
     ansible-playbook -i inventory.yml playbooks/install.yml
     ```
 
-    This will run the `install.yml` playbook only. Be aware of the dependencies of the playbooks. For example, the `osw.yml` playbook depends on the `install.yml` playbook. You need to set up the right dependencies by yourself if you run the playbooks separately or applying your own modifications to match your needs.
+    This will run the `install.yml` playbook only. Be aware of the dependencies of the playbooks. For instance, the `osw.yml` playbook depends on the order of `install.yml` and `caddy.yml` playbooks. You need to set up the right dependencies by yourself, if you run the playbooks separately or applying your own modifications to match your needs.
 
 ## Authors
 
