@@ -1,0 +1,91 @@
+# prefect.yml
+
+# Authors: 
+#   Simon Stier, https://github.com/simontaurus 
+
+# Begin: Check Ansible User
+- name: Check Ansible User
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Fail reliably if 'ansible_user' is not defined
+      fail:
+        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+      when: ansible_user is not defined
+
+    - name: Print 'ansible_user'
+      debug:
+        msg: "ansible_user: {{ ansible_user }}"
+      when: ansible_user is defined
+# End: Check Ansible User
+
+# Begin: Deploy Prefect Workflow Engine
+- name: Deploy Prefect Workflow Engine
+  hosts: all   
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+
+    - name: Clone Open Prefect Workflow Engine docker compose repository
+      ansible.builtin.git:
+        repo: https://github.com/OpenSemanticWorld/prefect-docker-compose.git
+        version: osw
+        dest: /usr/local/docker-container/prefect
+
+    - name: Copy .env.example to .env
+      ansible.builtin.copy:
+        src: /usr/local/docker-container/prefect/.env.example
+        dest: /usr/local/docker-container/prefect/.env
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: 0644
+        force: no
+
+    - name: Create/Replace values by key dict in .env file
+      lineinfile:
+        path: /usr/local/docker-container/prefect/.env
+        regexp: "^{{ item.key }}=.*$" 
+        line: "{{ item.key }}={{ item.value }}" 
+        backrefs: no # yes enables capture groups
+      with_dict: 
+        PREFECT_SERVER: "https://prefect.{{ domain }}"
+
+    - name: Copy Compose Override Caddy
+      ansible.builtin.copy:
+        src: /usr/local/docker-container/prefect/docker-compose.caddy.example.override.yml
+        dest: /usr/local/docker-container/prefect/docker-compose.override.yml
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: 0644
+        force: yes
+
+    - name: Deploy Compose (Server)
+      community.docker.docker_compose:
+        project_src: /usr/local/docker-container/prefect
+        profiles: [ "server" ]
+      register: prefect_server
+
+    - name: Wait until HTTP status is 200
+      uri:
+        url: 'https://{{ domain }}'
+        return_content: yes
+        validate_certs: yes
+        status_code:
+          - 200
+      until: uri_output.status == 200
+      delay: 10     # every 10 seconds
+      retries: 60   # total 10 min
+      register: uri_output
+
+    - name: Deploy Compose (Agent)
+      community.docker.docker_compose:
+        project_src: /usr/local/docker-container/prefect
+        profiles: [ "agent" ]
+      register: prefect_agent
+
+    - name: Display Prefect
+      debug: 
+        msg: "Prefect has been deployed successfully, visit: https://prefect.{{ domain }}"
+      failed_when: uri_output.status != 200
+# End: Deploy Prefect Workflow Engine
+
