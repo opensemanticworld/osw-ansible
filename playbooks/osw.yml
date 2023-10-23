@@ -66,6 +66,16 @@
         DRAWIO_SERVER: "https://drawio.{{ domain }}"
         GRAPHDB_SERVER: "https://graph.{{ domain }}"
 
+    - name: Replace multiline values by key dict in .env file
+      ansible.builtin.replace:
+        path: /usr/local/docker-container/osw/.env
+        # matches key="value" or key=value or key="\nvalue\n"
+        # but does not ensure existence of key
+        regexp: '{{ item.key }}=\"[^\"]*\"|{{ item.key }}=[^\n]*$'
+        replace: "{{ item.key }}={{ item.value }}"
+      with_dict: 
+        MW_PAGE_PACKAGES: "{{ packages }}"
+
     - name: Copy Compose Override Caddy
       ansible.builtin.copy:
         src: /usr/local/docker-container/osw/docker-compose.caddy.example.override.yml
