@@ -31,7 +31,7 @@
         repo: https://github.com/BIG-MAP/onterface-battmo-agent
         dest: /usr/local/docker-container/battmo
         version: "refactor-containerization"
-        track_submodules: true
+        track_submodules: false # we need to keep the specified versions
 
     - name: Copy .env.example to .env
       ansible.builtin.copy:
