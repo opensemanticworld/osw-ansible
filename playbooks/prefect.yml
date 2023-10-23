@@ -77,11 +77,11 @@
       retries: 60   # total 10 min
       register: uri_output
 
-    - name: Deploy Compose (Agent)
-      community.docker.docker_compose:
-        project_src: /usr/local/docker-container/prefect
-        profiles: [ "agent" ]
-      register: prefect_agent
+    # - name: Deploy Compose (Agent)
+    #  community.docker.docker_compose:
+    #    project_src: /usr/local/docker-container/prefect
+    #    profiles: [ "agent" ]
+    #  register: prefect_agent
 
     - name: Display Prefect
       debug: 
