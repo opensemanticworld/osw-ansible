@@ -1,0 +1,64 @@
+# battmo.yml
+
+# Authors: 
+#   Simon Stier, https://github.com/simontaurus 
+
+# Begin: Check Ansible User
+- name: Check Ansible User
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Fail reliably if 'ansible_user' is not defined
+      fail:
+        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+      when: ansible_user is not defined
+
+    - name: Print 'ansible_user'
+      debug:
+        msg: "ansible_user: {{ ansible_user }}"
+      when: ansible_user is defined
+# End: Check Ansible User
+
+# Begin: Deploy BattMo-Agent
+- name: Deploy BattMo-Agent
+  hosts: all   
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+
+    - name: Clone BattMo-Agent repository
+      ansible.builtin.git:
+        repo: https://github.com/BIG-MAP/onterface-battmo-agent
+        dest: /usr/local/docker-container/battmo
+        version: "refactor-containerization"
+        track_submodules: true
+
+    - name: Copy .env.example to .env
+      ansible.builtin.copy:
+        src: /usr/local/docker-container/battmo/.env.example
+        dest: /usr/local/docker-container/battmo/.env
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: 0644
+        force: no
+
+    - name: Create/Replace values by key dict in .env file
+      lineinfile:
+        path: /usr/local/docker-container/battmo/.env
+        regexp: "^{{ item.key }}=.*$" 
+        line: "{{ item.key }}={{ item.value }}" 
+        backrefs: no # yes enables capture groups
+      # dict refers to new untracked .env copied from .env.example
+      # https://github.com/OpenSemanticLab/docker-compose-osl-wiki/blob/main/.example.env
+      # add or change valid key-value pairs to your needs and set vars in inventory.yml
+      with_dict: 
+        PREFECT_SERVER: "https://prefect.{{ domain }}"
+        WORK_QUEUE_NAME: default-agent-pool
+        OSW_SERVER: "{{ domain }}"
+        OSW_USER: Admin
+        OSW_PASSWORD: "{{ admin_password }}"
+
+    - name: Deploy BattMo-Agent
+      community.docker.docker_compose:
+        project_src: /usr/local/docker-container/battmo
+      register: battmo
