@@ -88,6 +88,8 @@
     - name: Deploy Compose Open Semantic World (OSW)
       community.docker.docker_compose:
         project_src: /usr/local/docker-container/osw
+        pull: true
+        state: present
       register: osw
 
     - name: Wait until HTTP status is 200
