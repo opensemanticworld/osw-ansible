@@ -1,0 +1,65 @@
+# ansible-galaxy collection install community.aws
+# apt-get install sshpass
+
+# Setup environment => required root, should be moved to install.yml
+# may require to run "apt-get update" on the host
+
+- name: Install python boto3 package for S3 backups
+  hosts: all
+  become: yes
+  become_user: root
+  vars:
+    pip_install_packages:
+      - name: boto3
+  roles:
+    - geerlingguy.pip
+
+# Backup OSW
+
+- name: Backup Open Semantic World (OSW)
+  hosts: all
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+
+    - name: Create 'backup' directory
+      file:
+        path: "{{ item.path }}/backup"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: dev
+        mode: 0775
+      #vars:
+      #  - type1_role_name: "{{ item.name }}"
+      with_items: "{{ containers }}"
+
+    - name: Backup OSW DB
+      ansible.builtin.shell: |
+        cd {{ item.path }} &&
+        docker compose exec db /bin/bash -c 'mysqldump --all-databases -uroot -p"$MYSQL_ROOT_PASSWORD" 2>/dev/null | gzip | base64 -w 0' | base64 -d > backup/db_backup_$(date +"%Y%m%d_%H%M%S").sql.gz
+      with_items: "{{ containers }}"
+
+    - name: Backup OSW files
+      ansible.builtin.shell: |
+        cd {{ item.path }} &&
+        tar -zcf backup/file_backup_$(date +"%Y%m%d_%H%M%S").tar mediawiki/data
+      with_items: "{{ containers }}"
+
+    - name: Upload to S3
+      community.aws.s3_sync:
+        endpoint_url: "{{ s3_endpoint_url }}"
+        access_key: "{{ s3_access_key }}"
+        secret_key: "{{ s3_secret_key }}"
+        bucket: "{{ s3_bucket }}"
+        file_root: "{{ item.path }}/backup" 
+        key_prefix: "container/{{ item.name }}/backup"
+        #include: "backup/*" # does not work
+        delete: "{{ ( keep_only_latest is defined and keep_only_latest == true ) | ternary('yes', omit) }}"
+      with_items: "{{ containers }}"
+
+    - name: cleanup
+      when: cleanup is defined and cleanup == true
+      ansible.builtin.file:
+        path: "{{ item.path }}/backup"
+        state: absent
+      with_items: "{{ containers }}"

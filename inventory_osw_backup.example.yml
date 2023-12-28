@@ -1,0 +1,17 @@
+# inventory to backup osw instances
+
+virtualmachines:
+    hosts:
+      vm-1:
+        ansible_host: xxx.xxx.xxx.xxx   # change this to your vm ip address
+        ansible_user: ubuntu          # change this to vm user with ssh sudo access
+        s3_endpoint_url: https://s3.me.com # change this to your s3 endpoint url
+        s3_access_key: <s3_access_key>
+        s3_secret_key: <s3_secret_key>
+        s3_bucket: my-bucket
+        cleanup: true # delete backup files from host after upload
+        keep_only_latest: false # if true, keep only latest backup file in the S3 bucket
+        containers: # change this to your container names and paths
+          - name: "osl-test"
+            path: "/usr/local/docker-container/osl-test"
+
