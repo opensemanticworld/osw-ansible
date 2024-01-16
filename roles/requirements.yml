@@ -1,0 +1,7 @@
+  # Install a role from Ansible Galaxy.
+
+- src: geerlingguy.pip
+
+- src: geerlingguy.docker
+
+- src: kwoodson.yedit
