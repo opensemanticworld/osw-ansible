@@ -1,0 +1,36 @@
+- name: Check / Monitor system stats
+  hosts: all
+  tasks:
+
+  - name: Init flag
+    set_fact: 
+      flag: success
+
+  - name: Ensure that free space on {{ mountname }} is greater than 30%
+    ignore_errors: yes
+    register: result
+    assert:
+      that: mount.size_available > mount.size_total|float * 0.30
+      msg: free disk space ({{ mount.size_available / mount.size_total * 100 }}%) is below 30% threshold
+    vars:
+      mountname: "{{ monitor_freespace_mount | default('/') }}"
+      mount: "{{ ansible_mounts | selectattr('mount','equalto',mountname) | list | first }}"
+  - name: Set flag
+    set_fact: 
+      flag: failed
+    when: result is failed
+
+  - name: Ensure that free RAM is greater than 1024 MB
+    ignore_errors: yes
+    register: result
+    # see https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_vars_facts.html
+    assert:
+      that: ansible_memfree_mb >= 1024
+      msg: free RAM ({{ ansible_memfree_mb }}, total {{ ansible_memtotal_mb }}) is below 1024 MB threshold
+  - name: Set flag
+    set_fact: 
+      flag: failed
+    when: result is failed
+
+  - fail: msg="The execution has failed because of errors."
+    when: flag == "failed"
