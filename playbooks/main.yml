@@ -5,7 +5,7 @@
 
 # Begin: Full OSW Deployment
 - name: Full OSW Deployment
-  hosts: localhost
+  hosts: "{{ target_hosts | default('all') }}"
   tasks:
     - ansible.builtin.debug:
         msg: "Calling playbook sequence for full OSW Deployment: install.yml, caddy.yml, osw.yml"
