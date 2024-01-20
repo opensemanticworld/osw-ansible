@@ -29,7 +29,13 @@
     - name: Verify SSH connection
       ansible.builtin.wait_for_connection:
 
-    - name: Create 'caddy-docker-proxy' directory if it does not exist
+    - name: Clone caddy repository
+      ansible.builtin.git:
+        repo: https://github.com/OpenSemanticWorld/caddy-docker-proxy
+        dest: /usr/local/docker-container/caddy-docker-proxy
+        version: "main"
+
+    - name: Ensure folder exists and permissions are set
       ansible.builtin.file:
         path: /usr/local/docker-container/caddy-docker-proxy
         owner: "{{ ansible_user }}"
@@ -41,6 +47,7 @@
         name: caddy
 
     - name: Manage docker-compose.yml of caddy-docker-proxy
+      when: false # we use the default docker-compose.yml for now
       yedit:
         src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.yml
         value:
