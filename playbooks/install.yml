@@ -6,7 +6,7 @@
 
 # Begin: Check Ansible User
 - name: Check Ansible User
-  hosts: all
+  hosts: "{{ variable_hosts | default('all') }}"
   gather_facts: false
   tasks:
     - name: Fail reliably if 'ansible_user' is not defined
@@ -22,7 +22,7 @@
 
 # Begin: Prerequisites
 - name: Prerequisites
-  hosts: all
+  hosts: "{{ variable_hosts | default('all') }}"
   gather_facts: false
   become: yes
   become_user: root
@@ -57,7 +57,7 @@
 
 # Begin: Setup Docker
 - name: Setup Docker
-  hosts: all
+  hosts: "{{ variable_hosts | default('all') }}"
   become: yes
   become_user: root
   vars:
