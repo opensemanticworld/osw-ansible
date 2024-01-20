@@ -6,7 +6,7 @@
 
 # Begin: Check Ansible User
 - name: Check Ansible User
-  hosts: "{{ variable_hosts | default('all') }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   tasks:
     - name: Fail reliably if 'ansible_user' is not defined
@@ -22,7 +22,7 @@
 
 # Begin: Prerequisites
 - name: Prerequisites
-  hosts: "{{ variable_hosts | default('all') }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   become: yes
   become_user: root
@@ -57,12 +57,13 @@
 
 # Begin: Setup Docker
 - name: Setup Docker
-  hosts: "{{ variable_hosts | default('all') }}"
+  hosts: "{{ target_hosts | default('all') }}"
   become: yes
   become_user: root
   vars:
     pip_install_packages:
       - name: docker
+        version: "6.1.3" # https://github.com/docker/docker-py/issues/3194
       - name: docker-compose
   roles:
     - geerlingguy.pip
