@@ -5,7 +5,7 @@
 # may require to run "apt-get update" on the host
 
 - name: Install python boto3 package for S3 backups
-  hosts: all
+  hosts: "{{ target_hosts | default('all') }}"
   become: yes
   become_user: root
   vars:
@@ -17,7 +17,7 @@
 # Backup OSW
 
 - name: Backup Open Semantic World (OSW)
-  hosts: all
+  hosts: "{{ target_hosts | default('all') }}"
   tasks:
     - name: Verify SSH connection
       ansible.builtin.wait_for_connection:

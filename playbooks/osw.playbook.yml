@@ -4,7 +4,7 @@
 #   Simon Stier, https://github.com/simontaurus
 
 # Begin: Install Software
-- hosts: all
+- hosts: "{{ target_hosts | default('all') }}"
   vars:
     domain: demo2.open-semantic-lab.org
     dir: osw-demo2

@@ -5,7 +5,7 @@
 
 # Begin: Check Ansible User
 - name: Check Ansible User
-  hosts: all
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   tasks:
     - name: Fail reliably if 'ansible_user' is not defined
@@ -21,7 +21,7 @@
 
 # Begin: Deploy BattMo-Agent
 - name: Deploy BattMo-Agent
-  hosts: all   
+  hosts: "{{ target_hosts | default('all') }}"   
   tasks:
     - name: Verify SSH connection
       ansible.builtin.wait_for_connection:

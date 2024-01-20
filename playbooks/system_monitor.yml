@@ -1,5 +1,5 @@
 - name: Check / Monitor system stats
-  hosts: all
+  hosts: "{{ target_hosts | default('all') }}"
   tasks:
 
   - name: Init flag
