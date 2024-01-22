@@ -1,5 +1,5 @@
 - name: Check / Monitor system stats
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts | default('vm-misc2') }}"
   tasks:
 
   - name: Init flag
@@ -31,6 +31,20 @@
     set_fact: 
       flag: failed
     when: result is failed
+
+  - name: Send a notification to Teams Channel
+    when: flag == "failed" and teams_webhook_uri is defined
+    uri:
+      url: "{{ teams_webhook_uri }}"
+      method: POST
+      body_format: json
+      body:
+        title: "Monitoring Error Report {{ ansible_hostname }}"
+        text: "Details: {{ report_details_url }}"
+        #sections:
+        #  - facts:
+        #    - name : "RAM"
+        #      value: "free RAM ({{ ansible_memfree_mb }}, total {{ ansible_memtotal_mb }}) is below 1024 MB threshold"
 
   - fail: msg="The execution has failed because of errors."
     when: flag == "failed"
