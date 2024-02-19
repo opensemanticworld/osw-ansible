@@ -72,15 +72,15 @@ After configuration, you can run the Ansible Playbooks to deploy the OSW compone
 
     A reverse proxy will be installed and configured with `Caddy.` All OSW components will be installed and configured with Docker Compose. Ensure you have no other proxy, e.g., `nginx` running on the desired host.
 
-3. OPTIONAL: Additional services
- 
+2. OPTIONAL: Additional services
+
     Prefect Workflow Engine
 
     ```bash
     ansible-playbook -i inventory.yml playbooks/prefect.yml
     ```
 
-4. OPTIONAL: Customization
+3. OPTIONAL: Customization
 
     If you want to create your own ansible playbooks for a OSW deployment, you optionally can run the playbooks as single components. For example, to use the `install.yml` playbook for basic dependency installations, run the following command:
 
