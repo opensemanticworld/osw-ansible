@@ -6,6 +6,8 @@
 # Begin: Check Ansible User
 - name: Check Ansible User
   hosts: "{{ target_hosts | default('all') }}"
+  vars:
+    name: osw # used as folder name
   gather_facts: false
   tasks:
     - name: Fail reliably if 'ansible_user' is not defined
@@ -29,12 +31,12 @@
     - name: Clone Open Semantic World (OSW) repository
       ansible.builtin.git:
         repo: https://github.com/OpenSemanticLab/osl-mw-docker-compose.git
-        dest: /usr/local/docker-container/osw
+        dest: /usr/local/docker-container/{{ name }}
         version: "{{ git_osw_version }}"
     
     - name: Change ownership of osw/mediawiki/data directory
       ansible.builtin.file:
-        path: /usr/local/docker-container/osw/mediawiki/data
+        path: /usr/local/docker-container/{{ name }}/mediawiki/data
         owner: "{{ ansible_user }}"
         group: www-data
         state: directory
@@ -42,8 +44,8 @@
 
     - name: Copy .env.example to .env
       ansible.builtin.copy:
-        src: /usr/local/docker-container/osw/.env.example
-        dest: /usr/local/docker-container/osw/.env
+        src: /usr/local/docker-container/{{ name }}/.env.example
+        dest: /usr/local/docker-container/{{ name }}/.env
         remote_src: yes
         owner: "{{ ansible_user }}"
         mode: 0644
@@ -51,7 +53,7 @@
 
     - name: Create/Replace values by key dict in .env file
       lineinfile:
-        path: /usr/local/docker-container/osw/.env
+        path: /usr/local/docker-container/{{ name }}/.env
         regexp: "^{{ item.key }}=.*$" 
         line: "{{ item.key }}={{ item.value }}" 
         backrefs: no # yes enables capture groups
@@ -68,7 +70,7 @@
 
     - name: Replace multiline values by key dict in .env file
       ansible.builtin.replace:
-        path: /usr/local/docker-container/osw/.env
+        path: /usr/local/docker-container/{{ name }}/.env
         # matches key="value" or key=value or key="\nvalue\n"
         # but does not ensure existence of key
         regexp: '{{ item.key }}=\"[^\"]*\"|{{ item.key }}=[^\n]*$'
@@ -78,8 +80,8 @@
 
     - name: Copy Compose Override Caddy
       ansible.builtin.copy:
-        src: /usr/local/docker-container/osw/docker-compose.caddy.example.override.yml
-        dest: /usr/local/docker-container/osw/docker-compose.override.yml
+        src: /usr/local/docker-container/{{ name }}/docker-compose.caddy.example.override.yml
+        dest: /usr/local/docker-container/{{ name }}/docker-compose.override.yml
         remote_src: yes
         owner: "{{ ansible_user }}"
         mode: 0644
@@ -87,7 +89,7 @@
 
     - name: Deploy Compose Open Semantic World (OSW)
       community.docker.docker_compose:
-        project_src: /usr/local/docker-container/osw
+        project_src: /usr/local/docker-container/{{ name }}
         pull: true
         state: present
       register: osw
