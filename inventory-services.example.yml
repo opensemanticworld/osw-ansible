@@ -5,7 +5,7 @@
 
 virtualmachines:
     hosts:
-      vm-afints:
+      vm-1:
         ansible_host: <PUBLIC_IP>           # change this to your vm ip address
         ansible_user: <USERNAME>            # change this to vm user with ssh sudo access
         services:
