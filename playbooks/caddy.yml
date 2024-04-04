@@ -34,6 +34,7 @@
         repo: https://github.com/OpenSemanticWorld/caddy-docker-proxy
         dest: /usr/local/docker-container/caddy-docker-proxy
         version: "main"
+        # force: yes
 
     - name: Ensure folder exists and permissions are set
       ansible.builtin.file:
@@ -46,37 +47,41 @@
       docker_network:
         name: caddy
 
-    - name: Manage docker-compose.yml of caddy-docker-proxy
-      when: false # we use the default docker-compose.yml for now
-      yedit:
-        src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.yml
-        value:
-          version: "3.7"
-          services:
-            caddy:
-              image: lucaslorentz/caddy-docker-proxy:ci-alpine
-              container_name: caddycontainer
-              ports:
-                - 80:80
-                - 443:443
-              environment:
-                - CADDY_INGRESS_NETWORKS=caddy
-              networks:
-                - caddy
-              volumes:
-                - /var/run/docker.sock:/var/run/docker.sock
-                - caddy_data:/data
-              restart: unless-stopped
-          networks:
-            caddy:
-              external: true
-          volumes:
-            caddy_data: {}
+    # - name: Manage docker-compose.yml of caddy-docker-proxy
+    #   when: false # we use the default docker-compose.yml for now
+    #   yedit:
+    #     src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.yml
+    #     value:
+    #       version: "3.7"
+    #       services:
+    #         caddy:
+    #           image: lucaslorentz/caddy-docker-proxy:ci-alpine
+    #           container_name: caddycontainer
+    #           ports:
+    #             - 80:80
+    #             - 443:443
+    #           environment:
+    #             - CADDY_INGRESS_NETWORKS=caddy
+    #           networks:
+    #             - caddy
+    #           volumes:
+    #             - /var/run/docker.sock:/var/run/docker.sock
+    #             - caddy_data:/data
+    #           restart: unless-stopped
+    #       networks:
+    #         caddy:
+    #           external: true
+    #       volumes:
+    #         caddy_data: {}
 
     - name: Create and start caddy service
       community.docker.docker_compose:
         project_src: /usr/local/docker-container/caddy-docker-proxy
       register: caddyproxy
+
+    # - name: Print register variable for debugging
+    #   debug:
+    #     var: caddyproxy
 
     - name: Verify if caddy is running
       ansible.builtin.assert:
