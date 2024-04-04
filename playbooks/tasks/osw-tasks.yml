@@ -1,0 +1,93 @@
+# osw-tasks.yml
+
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+#   Simon Stier, https://github.com/simontaurus
+
+- name: Clone Open Semantic World (OSW) repository [{{ service.name }}]
+  ansible.builtin.git:
+    repo: https://github.com/OpenSemanticLab/osl-mw-docker-compose.git
+    dest: /usr/local/docker-container/{{ service.name }}
+    version: "{{ service.git_osw_version }}"
+    
+- name: Change ownership of osw/mediawiki/data directory [{{ service.name }}]
+  ansible.builtin.file:
+    path: /usr/local/docker-container/{{ service.name }}/mediawiki/data
+    owner: "{{ ansible_user }}"
+    group: www-data
+    state: directory
+    mode: 0775
+
+- name: Copy .env.example to .env [{{ service.name }}]
+  ansible.builtin.copy:
+    src: /usr/local/docker-container/{{ service.name }}/.env.example
+    dest: /usr/local/docker-container/{{ service.name }}/.env
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    mode: 0644
+    force: no
+
+- name: Create/Replace values by key dict in .env file [{{ service.name }}]
+  lineinfile:
+    path: /usr/local/docker-container/{{ service.name }}/.env
+    regexp: "^{{ item.key }}=.*$" 
+    line: "{{ item.key }}={{ item.value }}" 
+    backrefs: no # yes enables capture groups
+  # dict refers to new untracked .env copied from .env.example
+  # https://github.com/OpenSemanticLab/docker-compose-osl-wiki/blob/main/.example.env
+  # add or change valid key-value pairs to your needs and set vars in inventory.yml
+  with_dict: 
+    MYSQL_ROOT_PASSWORD: "{{ service.admin_password }}"
+    MW_DB_PASS: "{{ service.admin_password }}"
+    MW_ADMIN_PASS: "{{ service.admin_password }}"
+    MW_HOST_PORT: "{{ service.mw_host_port }}"
+    MYSQL_HOST_PORT: "{{ service.mysql_host_port }}"
+    DRAWIO_HOST_PORT: "{{ service.drawio_host_port }}"
+    GRAPHDB_HOST_PORT: "{{ service.graphdb_host_port }}"
+    MW_SITE_SERVER: "https://{{ service.domain }}"
+    DRAWIO_SERVER: "https://drawio.{{ service.domain }}"
+    GRAPHDB_SERVER: "https://graph.{{ service.domain }}"
+
+- name: Replace multiline values by key dict in .env file [{{ service.name }}]
+  ansible.builtin.replace:
+    path: /usr/local/docker-container/{{ service.name }}/.env
+    # matches key="value" or key=value or key="\nvalue\n"
+    # but does not ensure existence of key
+    regexp: '{{ item.key }}=\"[^\"]*\"|{{ item.key }}=[^\n]*$'
+    replace: "{{ item.key }}={{ item.value }}"
+  with_dict: 
+    MW_PAGE_PACKAGES: "{{ service.packages }}"
+
+- name: Copy Compose Override Caddy [{{ service.name }}]
+  ansible.builtin.copy:
+    src: /usr/local/docker-container/{{ service.name }}/docker-compose.caddy.example.override.yml
+    dest: /usr/local/docker-container/{{ service.name }}/docker-compose.override.yml
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    mode: 0644
+    force: yes
+
+- name: Deploy Compose Open Semantic World (OSW) [{{ service.name }}]
+  community.docker.docker_compose:
+    project_src: /usr/local/docker-container/{{ service.name }}
+    pull: true
+    state: present
+  register: osw
+
+- name: Wait until HTTP status is 200 [{{ service.name }}]
+  uri:
+    url: 'https://{{ service.domain }}'
+    return_content: yes
+    validate_certs: yes
+    status_code:
+      - 200
+  until: uri_output.status == 200
+  delay: 10     # every 10 seconds
+  retries: 60   # total 10 min
+  register: uri_output
+
+- name: Display OSW Domain [{{ service.name }}]
+  debug: 
+    msg: "OSW has been deployed successfully, visit: https://{{ service.domain }}"
+  failed_when: uri_output.status != 200
+# # End: Deploy Open Semantic World (OSW)

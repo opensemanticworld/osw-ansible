@@ -1,0 +1,44 @@
+# inventory-services.yml
+
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+
+virtualmachines:
+    hosts:
+      vm-afints:
+        ansible_host: <PUBLIC_IP>           # change this to your vm ip address
+        ansible_user: <USERNAME>            # change this to vm user with ssh sudo access
+        services:
+          osw:
+            - name: osw-1
+              domain: <DOMAIN_1>            # change this to your 1st domain
+              git_osw_version: main         # setup osw version
+              admin_password: my_secret_pw1 # sensitive, change this!
+              mw_host_port: 8081            # change this to your 1st mediawiki port
+              mysql_host_port: 3307         # change this to your 1st mysql port
+              drawio_host_port: 8082        # change this to your 1st drawio port
+              graphdb_host_port: 9999       # change this to your 1st graphdb port
+              packages: |-                  # change this to your 1st mediawiki packages
+                "
+                world.opensemantic.core;
+                world.opensemantic.base;
+                world.opensemantic.lab;
+                world.opensemantic.lab.virtual
+                world.opensemantic.demo.lab.virtual;
+                "
+            - name: osw-2                   # change all below to your 2nd osw instance configuration
+              domain: <DOMAIN_2>
+              git_osw_version: main 
+              admin_password: my_secret_pw2
+              mw_host_port: 8091
+              mysql_host_port: 3317
+              drawio_host_port: 8092
+              graphdb_host_port: 9989
+              packages: |-
+                "
+                world.opensemantic.core;
+                world.opensemantic.base;
+                world.opensemantic.lab;
+                world.opensemantic.lab.virtual
+                world.opensemantic.demo.lab.virtual;
+                "
