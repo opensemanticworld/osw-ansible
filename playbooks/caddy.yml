@@ -43,6 +43,31 @@
         state: directory
         mode: 0755
 
+    - name: Copy .env.example to .env
+      ansible.builtin.copy:
+        src: /usr/local/docker-container/caddy-docker-proxy/.env.example
+        dest: /usr/local/docker-container/caddy-docker-proxy/.env
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: 0644
+        force: no
+      when: acme_ca is defined and acme_eab_key_id is defined and acme_eab_mac_key is defined
+
+    - name: Create/Replace values by key dict in .env file 
+      lineinfile:
+        path: /usr/local/docker-container/caddy-docker-proxy/.env
+        regexp: "^{{ item.key }}=.*$" 
+        line: "{{ item.key }}={{ item.value }}" 
+        backrefs: no # yes enables capture groups
+      # dict refers to new untracked .env copied from .env.example
+      # https://github.com/OpenSemanticLab/docker-compose-osl-wiki/blob/main/.example.env
+      # add or change valid key-value pairs to your needs and set vars in inventory.yml
+      with_dict: 
+        ACME_CA: "{{ acme_ca }}"
+        ACME_EAB_KEY_ID: "{{ acme_eab_key_id }}"
+        ACME_EAB_MAC_KEY: "{{ acme_eab_mac_key }}"
+      when: acme_ca is defined and acme_eab_key_id is defined and acme_eab_mac_key is defined
+
     - name: Create a network
       docker_network:
         name: caddy
