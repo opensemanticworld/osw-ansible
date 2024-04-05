@@ -70,7 +70,7 @@
 
     - name: Copy Compose Override Caddy
       ansible.builtin.copy:
-        src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.caddy.custom.override.yml
+        src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.custom.override.yml
         dest: /usr/local/docker-container/caddy-docker-proxy/docker-compose.override.yml
         remote_src: yes
         owner: "{{ ansible_user }}"
