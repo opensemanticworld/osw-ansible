@@ -60,7 +60,7 @@
   hosts: "{{ target_hosts | default('all') }}"
   become: yes
   become_user: root
-  gather_facts: false
+  gather_facts: true
   tasks:
     - name: Install required packages ca-certificates, curl, gnupg
       apt:
