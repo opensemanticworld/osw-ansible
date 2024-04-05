@@ -68,6 +68,16 @@
         ACME_EAB_MAC_KEY: "{{ acme_eab_mac_key }}"
       when: acme_ca is defined and acme_eab_key_id is defined and acme_eab_mac_key is defined
 
+    - name: Copy Compose Override Caddy
+      ansible.builtin.copy:
+        src: /usr/local/docker-container/caddy-docker-proxy/docker-compose.caddy.custom.override.yml
+        dest: /usr/local/docker-container/caddy-docker-proxy/docker-compose.override.yml
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        mode: 0644
+        force: yes
+      when: acme_ca is defined and acme_eab_key_id is defined and acme_eab_mac_key is defined
+
     - name: Create a network
       docker_network:
         name: caddy
