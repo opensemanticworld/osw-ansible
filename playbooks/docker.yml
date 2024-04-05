@@ -118,7 +118,7 @@
     - name: Reboot remote host to refresh groups
       reboot:
       register: reboot_result
-      when: reboot is defined and reboot
+      when: reboot is defined and reboot=='yes' # string 'yes' is needed here (semaphore)
       
     # only if '-e reboot=true' is set
     - name: Wait for remote host to come back online
