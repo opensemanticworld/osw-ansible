@@ -70,7 +70,7 @@
           - gnupg
         state: present
 
-    - name: Check if Docker's official GPG key exists [{{ linux_dist }}]
+    - name: Check if Docker's official GPG key exists
       ansible.builtin.stat:
         path: /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
       register: gpg_check
