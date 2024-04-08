@@ -75,13 +75,13 @@
         path: /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
       register: gpg_check
 
-    - name: Add Docker's official GPG key [{{ linux_dist }}]
-      shell: curl -fsSL https://download.docker.com/linux/{{ linux_dist }}/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
+    - name: Add Docker's official GPG key [{{ ansible_distribution|lower }}]
+      shell: curl -fsSL https://download.docker.com/linux/{{ ansible_distribution|lower }}/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
       when: not gpg_check.stat.exists
 
-    - name: Add Docker repository [{{ linux_dist }}]
+    - name: Add Docker repository [{{ ansible_distribution|lower }}]
       apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker-archive-keyring.gpg] https://download.docker.com/linux/{{ linux_dist }} {{ ansible_distribution_release }} stable"
+        repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker-archive-keyring.gpg] https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable"
         state: present
       when: not gpg_check.stat.exists
 
@@ -113,12 +113,14 @@
         name: "{{ ansible_user }}"
         groups: dev,docker,www-data
         append: yes
+      register: user_groups
 
     # only if '-e reboot=true' is set
     - name: Reboot remote host to refresh groups
       reboot:
       register: reboot_result
-      when: reboot is defined and reboot=='yes' # string 'yes' is needed here (semaphore)
+      # string 'yes' is for var 'reboot' in semaphore
+      when: (reboot is defined and reboot=='yes') or user_groups.changed 
       
     # only if '-e reboot=true' is set
     - name: Wait for remote host to come back online
@@ -129,6 +131,3 @@
         timeout: 300
       when: reboot_result is defined and reboot_result.changed
 # End: Setup Docker
-
-
-      
