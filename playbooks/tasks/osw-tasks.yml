@@ -69,10 +69,9 @@
     force: yes
 
 - name: Deploy Compose Open Semantic World (OSW) [{{ service.name }}]
-  community.docker.docker_compose:
-    project_src: /usr/local/docker-container/{{ service.name }}
-    pull: true
-    state: present
+  ansible.builtin.shell:
+    chdir: /usr/local/docker-container/{{ service.name }}
+    cmd: docker compose up -d
   register: osw
 
 - name: Wait until HTTP status is 200 [{{ service.name }}]
