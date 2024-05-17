@@ -37,6 +37,7 @@
   # https://github.com/OpenSemanticLab/docker-compose-osl-wiki/blob/main/.example.env
   # add or change valid key-value pairs to your needs and set vars in inventory.yml
   with_dict: 
+    COMPOSE_PROJECT_NAME: "{{ service.name }}"
     MYSQL_ROOT_PASSWORD: "{{ service.admin_password }}"
     MW_DB_PASS: "{{ service.admin_password }}"
     MW_ADMIN_PASS: "{{ service.admin_password }}"
