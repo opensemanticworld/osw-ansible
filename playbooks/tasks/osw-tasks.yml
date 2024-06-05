@@ -6,7 +6,7 @@
 
 - name: Clone Open Semantic World (OSW) repository [{{ service.name }}]
   ansible.builtin.git:
-    repo: https://github.com/OpenSemanticLab/osl-mw-docker-compose.git
+    repo: https://github.com/OpenSemanticLab/docker-compose-osl-wiki.git
     dest: /usr/local/docker-container/{{ service.name }}
     version: "{{ service.git_osw_version }}"
     
@@ -34,7 +34,6 @@
     line: "{{ item.key }}={{ item.value }}" 
     backrefs: no # yes enables capture groups
   # dict refers to new untracked .env copied from .env.example
-  # https://github.com/OpenSemanticLab/docker-compose-osl-wiki/blob/main/.example.env
   # add or change valid key-value pairs to your needs and set vars in inventory.yml
   with_dict: 
     COMPOSE_PROJECT_NAME: "{{ service.name }}"
