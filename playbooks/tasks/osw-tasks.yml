@@ -20,7 +20,7 @@
 
 - name: Copy .env.example to .env [{{ service.name }}]
   ansible.builtin.copy:
-    src: /usr/local/docker-container/{{ service.name }}/.example.env
+    src: /usr/local/docker-container/{{ service.name }}/.env.example
     dest: /usr/local/docker-container/{{ service.name }}/.env
     remote_src: yes
     owner: "{{ ansible_user }}"
