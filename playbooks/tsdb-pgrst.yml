@@ -1,0 +1,38 @@
+# tsdb-pgrst.yml
+
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+
+# Begin: Check Ansible User
+- name: Check Ansible Connection and User
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+
+    - name: Fail reliably if 'ansible_user' is not defined
+      fail:
+        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+      when: ansible_user is not defined
+
+    - name: Print 'ansible_user'
+      debug:
+        msg: "ansible_user: {{ ansible_user }}"
+      when: ansible_user is defined
+# End: Check Ansible User
+
+# Begin: TimescaleDB and PostgREST Deployment
+- name: TimescaleDB and PostgREST Deployment
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  tasks:
+    # Beware of the differences, tradeoffs and pitfalls between include and import in Ansible!
+    # https://docs.ansible.com/ansible/2.9/user_guide/playbooks_reuse.html
+    # - include_tasks: tasks/includetasks.yml
+    - name: Include OSW tasks
+      include_tasks: tasks/tsdb-pgrst-tasks.yml
+      loop: "{{ hostvars[inventory_hostname]['services']['tsdb-pgrst'] }}"
+      loop_control:
+        loop_var: service
+# End: TimescaleDB and PostgREST Deployment

@@ -1,0 +1,136 @@
+- name: Clone Repo TimescaleDB PostgREST [{{ service.name }}]
+  git:
+    repo: https://github.com/OpenSemanticLab/timescaledb-postgrest.git
+    dest: /usr/local/docker-container/{{ service.name }}
+    # force: yes
+    version: "{{ service.git_version }}"
+
+- name: Copy .env.example to .env [{{ service.name }}]
+  copy:
+    src: /usr/local/docker-container/{{ service.name }}/.env.example
+    dest: /usr/local/docker-container/{{ service.name }}/.env
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    mode: 0644
+    force: no
+
+- name: Copy SQL Init PostgREST Script for API
+  copy:
+    src: /usr/local/docker-container/{{ service.name }}/db/0_init_pgrst.sql
+    dest: /usr/local/docker-container/{{ service.name }}/docker-entrypoint/0_init_pgrst.sql
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    mode: 0644
+    force: no
+
+- name: Override API Authenticator Secret
+  lineinfile:
+    path: /usr/local/docker-container/{{ service.name }}/docker-entrypoint/0_init_pgrst.sql
+    regexp: "^CREATE ROLE authenticator WITH NOINHERIT LOGIN PASSWORD '.*';$"
+    line: "CREATE ROLE authenticator WITH NOINHERIT LOGIN PASSWORD '{{ service.pgrst_jwt_secret }}';"
+    backrefs: no
+
+- name: Copy SQL Init DB Schema Script for API
+  copy:
+    src: /usr/local/docker-container/{{ service.name }}/db/2_init_schema2.sql
+    dest: /usr/local/docker-container/{{ service.name }}/docker-entrypoint/2_init_schema2.sql
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    mode: 0644
+    force: no
+
+- name: Create/Replace values by key dict in .env file [{{ service.name }}]
+  lineinfile:
+    path: /usr/local/docker-container/{{ service.name }}/.env
+    regexp: "^{{ item.key }}=.*$" 
+    line: "{{ item.key }}={{ item.value }}" 
+    backrefs: no # yes enables capture groups
+  # dict refers to new untracked .env copied from .env.example
+  # https://github.com/OpenSemanticLab/docker-compose-osl-wiki/blob/main/.example.env
+  # add or change valid key-value pairs to your needs and set vars in inventory.yml
+  with_dict: 
+    COMPOSE_PROJECT_NAME: "{{ service.name }}"
+    RESTART_POLICY: unless-stopped
+    # TSDB
+    TIMESCALEDB_VERSION: "{{ service.timescaledb_version }}"
+    TIMESCALEDB_TELEMETRY: "{{ service.timescaledb_telemetry }}"
+    POSTGRES_DB: "{{ service.postgres_db }}"
+    POSTGRES_USER: "{{ service.postgres_user }}"
+    POSTGRES_PASSWORD: "{{ service.postgres_password }}"
+    # PGRST
+    PGRST_VERSION: "{{ service.pgrst_version }}"
+    PGRST_OPENAPI_SERVER_PROXY_URI: "{{ service.pgrst_openapi_server_proxy_uri }}"
+    PGRST_JWT_SECRET: "{{ service.pgrst_jwt_secret }}"
+    # OpenAPI
+    SWAGGERUI_VERSION: "{{ service.swaggerui_version }}"
+    # PGAdmin
+    PGADMIN_VERSION: "{{ service.pgadmin_version }}"
+    PGADMIN_SERVER_URI: "{{ service.pgadmin_server_uri }}"
+    PGADMIN_DEFAULT_EMAIL: "{{ service.pgadmin_default_email }}"
+    PGADMIN_DEFAULT_PASSWORD: "{{ service.pgadmin_default_password }}"    
+
+
+
+- name: Copy Compose Override Caddy [{{ service.name }}]
+  ansible.builtin.copy:
+    src: /usr/local/docker-container/{{ service.name }}/docker-compose.caddy.example.override.yml
+    dest: /usr/local/docker-container/{{ service.name }}/docker-compose.override.yml
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    mode: 0644
+    force: yes
+
+- name: Deploy Compose [{{ service.name }}]
+  community.docker.docker_compose:
+    project_src: /usr/local/docker-container/{{ service.name }}
+    pull: true
+    state: present
+  register: "compose_deployment_output"
+
+- name: Debug Compose [{{ service.name }}]
+  debug:
+    var: "compose_deployment_output"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# - name: Start TimescaleDB with inline definition
+#   community.docker.docker_compose:
+#     project_name: "{{ service.name }}"
+#     definition:
+#       db:
+#         # image: "timescale/timescaledb:{{ service.timescaledb_version }}"
+#         image: "timescale/timescaledb:2.14.2-pg16"
+#         ports:
+#           - "{{ service.postgres_port }}:5432"
+#         environment:
+#           POSTGRES_USER: "{{ service.postgres_user }}"
+#           POSTGRES_PASSWORD: "{{ service.postgres_password }}"
+#           POSTGRES_DB: "{{ service.postgres_db }}"
+#     #         TIMESCALEDB_TELEMETRY: "{{ service.timescaledb_telemetry }}"
+#     #         TS_TUNE_MEMORY: "{{ service.ts_tune_memory }}"
+#     #         TS_TUNE_NUM_CPUS: "{{ service.ts_tune_num_cpus }}"
+#     #       volumes:
+#     #         - pgdata:/var/lib/postgresql/data
+#     #       restart: unless-stopped
+#     #   volumes:
+#     #     pgdata: 
+# #     register: timescaledb_output
+
+# # - name: Debug TimescaleDB
+# #   debug:
+# #     var: timescaledb_output
