@@ -1,0 +1,125 @@
+# caddy-certs-renewal.yml
+
+# Authors: 
+#   Andreas Räder, https://github.com/raederan 
+
+# Begin: Check Ansible User
+- name: Check Ansible Connection and User
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  tasks:
+    - name: Verify SSH connection
+      ansible.builtin.wait_for_connection:
+
+    - name: Fail reliably if 'ansible_user' is not defined
+      fail:
+        msg: "You need to set the ansible_user by using the flag -u <USERNAME> when running the playbook!"
+      when: ansible_user is not defined
+
+    - name: Print 'ansible_user'
+      debug:
+        msg: "ansible_user: {{ ansible_user }}"
+      when: ansible_user is defined
+# End: Check Ansible User
+
+# Begin: Force Caddy Certificate Renewal
+- name: Force Caddy Certificate Renewal
+  hosts: "{{ target_hosts | default('all') }}"
+  # hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: true
+  vars:
+    skip_task: false
+  tasks:
+    - name: Check if caddy container /data is empty and set skip_task to true if empty
+      ansible.builtin.command:
+        cmd: docker exec caddycontainer sh -c "ls /data"
+      register: data_dir
+      changed_when: false
+      
+    - name: Display caddy container /data content
+      ansible.builtin.debug:
+        var: data_dir.stdout
+
+    - name: Set skip_task to true if /data is empty
+      set_fact:
+        skip_task: "{{ data_dir.stdout == '' }}"
+
+    # - name: Debug skip_task
+    #   debug:
+    #     msg: "Skip Task: {{ skip_task }}"
+
+    # - name: Fail reliably if /data is empty
+    #   fail:
+    #     msg: "Caddy container /data is empty. No certificates to renew."
+    #   when: data_dir.stdout == "" 
+    
+    - name: Check if subdirs in /data/caddy/certificates are available
+      ansible.builtin.command:
+        cmd: docker exec caddycontainer sh -c "ls /data/caddy/certificates"
+      register: cert_providers
+      changed_when: false
+      when: not skip_task 
+
+    - name: Display available subdirs in /data/caddy/certificates
+      ansible.builtin.debug:
+        var: cert_providers.stdout
+      when: not skip_task
+
+    - name: Set skip_task to true if no subdirs are available
+      set_fact:
+        skip_task: "{{ cert_providers.stdout == '' }}"
+      when: not skip_task
+
+    - name: Set custom current timestamp variable
+      set_fact:
+        custom_timestamp: "{{ ansible_date_time.year }}-{{ ansible_date_time.month }}-{{ ansible_date_time.day }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second }}"
+      when: not skip_task
+
+    - name: Debug custom timestamp
+      debug:
+        msg: "Custom Timestamp: {{ custom_timestamp }}"
+      when: not skip_task
+
+    - name: Create backup directory for certificates
+      ansible.builtin.command:
+        cmd: docker exec caddycontainer sh -c "mkdir -p /mnt/backup/certificates/{{ custom_timestamp }}"
+      when: not skip_task
+
+    - name: Backup current certificates inside caddy container
+      ansible.builtin.command:
+        cmd: docker exec caddycontainer sh -c "mv /data/caddy/certificates/* /mnt/backup/certificates/{{ custom_timestamp }}/"
+      when: not skip_task
+
+    - name: Get backup directory content
+      ansible.builtin.command:
+        cmd: docker exec caddycontainer sh -c "ls /mnt/backup/certificates"
+      register: backup_dir
+      changed_when: false
+      when: not skip_task
+        
+    - name: Display backup directory content
+      ansible.builtin.debug:
+        var: backup_dir.stdout_lines
+        # var: backup_dir.stdout
+      when: not skip_task
+
+    # - name: Display backup directory content with new items
+    #   ansible.builtin.debug:
+    #     msg: "{{ item }}"
+    #   loop: "{{ backup_dir.stdout.splitlines() }}"
+    #   when: not skip_task
+
+    # Restart caddy-docker-proxy using docker commmand without docker-compose
+    # # !REQUIRES UPDATED ANSIBLE GALAXY MODULE FOR DOCKER-COMPOSE
+    # - name: Restart caddy-docker-proxy
+    #   community.docker.docker_compose_v2:
+    #     project_src: /usr/local/docker-container/caddy-docker-proxy
+    #     state: restarted
+    #   register: output
+
+    - name: Restart caddy-docker-proxy
+      ansible.builtin.command:
+        cmd: docker restart caddycontainer
+      register: output
+      when: not skip_task
+# # End: Force Caddy Certificate Renewal
