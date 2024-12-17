@@ -65,18 +65,18 @@
 
     - name: Set first Caddy container name as a string variable
       set_fact:
-        caddy_container_names: "{{ caddy_containers.stdout_lines[0] }}"
+        caddy_container_name: "{{ caddy_containers.stdout_lines[0] }}"
       changed_when: false
       when: not skip_task
 
     - name: Display Caddy container name
       debug:
-        var: caddy_container_names
+        var: caddy_container_name
       when: not skip_task
 
     - name: Check if caddy container /data is empty and set skip_task to true if empty
       ansible.builtin.command:
-        cmd: docker exec caddycontainer sh -c "ls /data"
+        cmd: docker exec {{ caddy_container_name }} sh -c "ls /data"
       register: data_dir
       changed_when: false
       when: not skip_task
@@ -102,7 +102,7 @@
     
     - name: Check if subdirs in /data/caddy/certificates are available
       ansible.builtin.command:
-        cmd: docker exec caddycontainer sh -c "ls /data/caddy/certificates"
+        cmd: docker exec {{ caddy_container_name }} sh -c "ls /data/caddy/certificates"
       register: cert_providers
       changed_when: false
       when: not skip_task 
@@ -129,17 +129,17 @@
 
     - name: Create backup directory for certificates
       ansible.builtin.command:
-        cmd: docker exec caddycontainer sh -c "mkdir -p /mnt/backup/certificates/{{ custom_timestamp }}"
+        cmd: docker exec {{ caddy_container_name }} sh -c "mkdir -p /mnt/backup/certificates/{{ custom_timestamp }}"
       when: not skip_task
 
     - name: Backup current certificates inside caddy container
       ansible.builtin.command:
-        cmd: docker exec caddycontainer sh -c "mv /data/caddy/certificates/* /mnt/backup/certificates/{{ custom_timestamp }}/"
+        cmd: docker exec {{ caddy_container_name }} sh -c "mv /data/caddy/certificates/* /mnt/backup/certificates/{{ custom_timestamp }}/"
       when: not skip_task
 
     - name: Get backup directory content
       ansible.builtin.command:
-        cmd: docker exec caddycontainer sh -c "ls /mnt/backup/certificates"
+        cmd: docker exec {{ caddy_container_name }} sh -c "ls /mnt/backup/certificates"
       register: backup_dir
       changed_when: false
       when: not skip_task
@@ -166,7 +166,7 @@
 
     - name: Restart caddy-docker-proxy
       ansible.builtin.command:
-        cmd: docker restart caddycontainer
+        cmd: docker restart {{ caddy_container_name }}
       register: output
       when: not skip_task
 # # End: Force Caddy Certificate Renewal
