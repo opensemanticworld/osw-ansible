@@ -34,10 +34,10 @@
         name: docker
         state: present
   
-    - name: Add 'ansible_user' to groups 'docker'
+    - name: Add 'ansible_user' to groups 'docker,dev'
       ansible.builtin.user:
         name: "{{ ansible_user }}"
-        groups: docker
+        groups: docker,dev
         append: yes
       register: user_groups
 # End: Docker permissions
