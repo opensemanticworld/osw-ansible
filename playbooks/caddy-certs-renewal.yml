@@ -22,14 +22,12 @@
       when: ansible_user is defined
 # End: Check Ansible User
 
-# Begin: Force Caddy Certificate Renewal
-- name: Force Caddy Certificate Renewal
+
+# Begin: Docker permissions
+- name: Ensure Docker Group and Add User
   hosts: "{{ target_hosts | default('all') }}"
-  # hosts: "{{ target_hosts | default('all') }}"
-  gather_facts: true
-  vars:
-    skip_task: false
-  tasks:
+  become: yes
+  become_user: root
     - name: Ensure group 'docker' exists
       ansible.builtin.group:
         name: docker
@@ -41,7 +39,16 @@
         groups: docker
         append: yes
       register: user_groups
+# End: Docker permissions
 
+# Begin: Force Caddy Certificate Renewal
+- name: Force Caddy Certificate Renewal
+  hosts: "{{ target_hosts | default('all') }}"
+  # hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: true
+  vars:
+    skip_task: false
+  tasks:
     - name: Check if caddy container /data is empty and set skip_task to true if empty
       ansible.builtin.command:
         cmd: docker exec caddycontainer sh -c "ls /data"
