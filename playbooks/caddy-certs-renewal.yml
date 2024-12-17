@@ -50,19 +50,46 @@
   vars:
     skip_task: false
   tasks:
+    - name: Get Docker container names containing 'caddy'
+      shell: docker container ls --filter "name=caddy" --format "{{ '{{.Names}}' }}"
+      register: caddy_containers
+      changed_when: false
+  
+    - name: Set skip_task to true if 'caddy' in container name is not available
+      set_fact:
+        skip_task: "{{ caddy_containers.stdout == '' }}"
+
+    - name: Debug skip_task
+      debug:
+        var: skip_task
+
+    - name: Set first Caddy container name as a string variable
+      set_fact:
+        caddy_container_names: "{{ caddy_containers.stdout_lines[0] }}"
+      changed_when: false
+      when: not skip_task
+
+    - name: Display Caddy container name
+      debug:
+        var: caddy_container_names
+      when: not skip_task
+
     - name: Check if caddy container /data is empty and set skip_task to true if empty
       ansible.builtin.command:
         cmd: docker exec caddycontainer sh -c "ls /data"
       register: data_dir
       changed_when: false
+      when: not skip_task
       
     - name: Display caddy container /data content
       ansible.builtin.debug:
         var: data_dir.stdout
+      when: not skip_task
 
     - name: Set skip_task to true if /data is empty
       set_fact:
         skip_task: "{{ data_dir.stdout == '' }}"
+      when: not skip_task
 
     # - name: Debug skip_task
     #   debug:
