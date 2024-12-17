@@ -28,6 +28,7 @@
   hosts: "{{ target_hosts | default('all') }}"
   become: yes
   become_user: root
+  tasks:
     - name: Ensure group 'docker' exists
       ansible.builtin.group:
         name: docker
