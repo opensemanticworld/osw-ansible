@@ -30,6 +30,18 @@
   vars:
     skip_task: false
   tasks:
+    - name: Ensure group 'docker' exists
+      ansible.builtin.group:
+        name: docker
+        state: present
+  
+    - name: Add 'ansible_user' to groups 'docker'
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+      register: user_groups
+WW
     - name: Check if caddy container /data is empty and set skip_task to true if empty
       ansible.builtin.command:
         cmd: docker exec caddycontainer sh -c "ls /data"
