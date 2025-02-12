@@ -50,12 +50,10 @@
   become: true
   become_user: root
   tasks:
-    - name: Update all disks block
-      block:
-      - name: Debug disks
-        debug:
-          var: disks
 
+    - name: Update all disks block
+      # Begin: Conditinal block
+      block:
       - name: Partition and format additional disks
         community.general.parted:
           device: "/dev/{{ item.value.device }}"
@@ -87,3 +85,5 @@
         with_dict: "{{ disks }}"
 
       when: disks is defined
+      # End: Conditinal block
+# End: Update additional disks
