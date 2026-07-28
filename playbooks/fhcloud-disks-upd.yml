@@ -45,7 +45,7 @@
   tasks:
     - name: Find the block device backing the root filesystem
       ansible.builtin.set_fact:
-        root_source: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='device') | first }}"
+        root_source: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | map(attribute='device') | first }}"
 
     - name: Resolve VG and LV name behind the root filesystem
       ansible.builtin.shell: |
@@ -91,13 +91,13 @@
   become_user: root
   vars:
     # Default target state for auto-discovered disks.
-    # Override with: -e disks_state=absent
-    disks_state: "{{ disks_state | default('mounted') }}"
+    # Override at runtime with: -e disks_state=absent
+    disks_state: "mounted"
 
   tasks:
     - name: Find the block device backing the root filesystem
       ansible.builtin.set_fact:
-        root_source: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='device') | first }}"
+        root_source: "{{ ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | map(attribute='device') | first }}"
 
     - name: Determine the base disk name of the root device (handles LVM/mapper paths too)
       ansible.builtin.set_fact:
@@ -112,7 +112,7 @@
               'state': disks_state
             }
           }) }}"
-      loop: "{{ ansible_devices | dict2items }}"
+      loop: "{{ ansible_facts['devices'] | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
       when:
