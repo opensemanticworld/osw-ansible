@@ -1,11 +1,11 @@
-# tsdb-pgrst.yml
+# fhcloud-disks-upd.yml
 #
 # Authors:
 #   Andreas Räder, https://github.com/raederan
 #   Linus Schenk, https://github.com/cptnsloww
 #
-# This playbook is hypervisor/controller agnostic: it does NOT hardcode
-# device names (sda/vda/sdb/vdb/nvme...) or LVM VG/LV names anywhere.
+# Hypervisor/controller agnostic: no hardcoded device names
+# (sda/vda/sdb/vdb/nvme...) or LVM VG/LV names anywhere.
 # Root disk and additional disks are discovered dynamically at runtime.
 #
 # Requires collections:
@@ -99,11 +99,11 @@
       ansible.builtin.set_fact:
         root_source: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='device') | first }}"
 
-    - name: Determine the base disk name of the root device (strip partition suffix)
+    - name: Determine the base disk name of the root device (handles LVM/mapper paths too)
       ansible.builtin.set_fact:
-        root_disk: "{{ root_source | regex_replace('^/dev/', '') | regex_replace('p?[0-9]+$', '') }}"
+        root_disk: "{{ root_source | regex_replace('^/dev/(mapper/)?', '') | regex_replace('p?[0-9]+$', '') }}"
 
-    - name: Auto-discover unpartitioned, non-root disks
+    - name: Auto-discover unpartitioned, non-root, non-removable disks
       ansible.builtin.set_fact:
         discovered_disks: "{{ discovered_disks | default({}) | combine({
             item.key: {
@@ -119,7 +119,7 @@
         - item.key != root_disk
         - item.key is match('^(sd|vd|xvd|nvme)[a-z0-9]+$')
         - item.value.partitions | length == 0
-        - item.value.removable == "0"
+        - item.value.removable in ["0", 0, false, "false"]
 
     - name: Merge auto-discovered disks with any manually defined 'disks' var (manual entries win)
       ansible.builtin.set_fact:
@@ -140,7 +140,6 @@
           loop: "{{ disks | dict2items }}"
           loop_control:
             label: "{{ item.key }}"
-          register: partitioned_disks
 
         - name: Create filesystem on partitions
           community.general.filesystem:
